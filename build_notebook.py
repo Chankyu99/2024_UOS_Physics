@@ -54,16 +54,16 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # ── Load band data ──────────────────────────────────────────────────────────
-bands_data = np.loadtxt("../data/bands.dat.gnu")
+bands_data = np.loadtxt("../data/graphene_bands.dat.gnu")
 k  = np.unique(bands_data[:, 0])
 bs = np.reshape(bands_data[:, 1], (-1, len(k)))
 
 # ── Load PDOS ──────────────────────────────────────────────────────────────
-pdos_tot   = np.loadtxt("../data/graphene.pdos_tot")
-pdos_atm1s = np.loadtxt("../data/graphene.pdos_atm#1(C)_wfc#1(s)")
-pdos_atm1p = np.loadtxt("../data/graphene.pdos_atm#1(C)_wfc#2(p)")
-pdos_atm2s = np.loadtxt("../data/graphene.pdos_atm#2(C)_wfc#1(s)")
-pdos_atm2p = np.loadtxt("../data/graphene.pdos_atm#2(C)_wfc#2(p)")
+pdos_tot   = np.loadtxt("../data/graphene_pdos_tot.dat")
+pdos_atm1s = np.loadtxt("../data/graphene_pdos_C1_s.dat")
+pdos_atm1p = np.loadtxt("../data/graphene_pdos_C1_p.dat")
+pdos_atm2s = np.loadtxt("../data/graphene_pdos_C2_s.dat")
+pdos_atm2p = np.loadtxt("../data/graphene_pdos_C2_p.dat")
 
 E_fermi = 2.3467   # eV shift so Fermi level = 0
 
@@ -110,15 +110,15 @@ print("Graphene: Dirac cone visible at K point (massless fermion behaviour)")
 cells.append(new_markdown_cell("### 1-2. h-BN — 2D Band Structure & DOS"))
 
 cells.append(new_code_cell("""\
-bn_bands_data = np.loadtxt("../data/bn_bands.dat.gnu")
+bn_bands_data = np.loadtxt("../data/hbn_bands.dat.gnu")
 k_bn  = np.unique(bn_bands_data[:, 0])
 bs_bn = np.reshape(bn_bands_data[:, 1], (-1, len(k_bn)))
 
-bn_pdos_tot  = np.loadtxt("../data/bn.pdos_tot")
-bn_pdos_bs   = np.loadtxt("../data/bn.pdos_atm#1(B)_wfc#1(s)")
-bn_pdos_bp   = np.loadtxt("../data/bn.pdos_atm#1(B)_wfc#2(p)")
-bn_pdos_ns   = np.loadtxt("../data/bn.pdos_atm#2(N)_wfc#1(s)")
-bn_pdos_np   = np.loadtxt("../data/bn.pdos_atm#2(N)_wfc#2(p)")
+bn_pdos_tot  = np.loadtxt("../data/hbn_pdos_tot.dat")
+bn_pdos_bs   = np.loadtxt("../data/hbn_pdos_B_s.dat")
+bn_pdos_bp   = np.loadtxt("../data/hbn_pdos_B_p.dat")
+bn_pdos_ns   = np.loadtxt("../data/hbn_pdos_N_s.dat")
+bn_pdos_np   = np.loadtxt("../data/hbn_pdos_N_p.dat")
 
 E_fermi_bn = 2.3467
 
@@ -166,8 +166,8 @@ cells.append(new_markdown_cell("### 1-3. Graphene — 3D Band Structure (Dirac C
 cells.append(new_code_cell("""\
 from mpl_toolkits.mplot3d import Axes3D   # noqa: F401
 
-data3d_1 = np.loadtxt("../data/gr_3dbands.4")
-data3d_2 = np.loadtxt("../data/gr_3dbands.5")
+data3d_1 = np.loadtxt("../data/graphene_3dbands_4.dat")
+data3d_2 = np.loadtxt("../data/graphene_3dbands_5.dat")
 
 fig = plt.figure(figsize=(8, 7))
 ax  = fig.add_subplot(111, projection="3d")
@@ -264,7 +264,7 @@ def parse_lammps_dump(file_path, use_last_frame=True):
     print(f"Loaded frame: timestep={timestep}, total atoms={len(df)}")
     return df
 
-df_all = parse_lammps_dump("../data/dump.minimization", use_last_frame=True)
+df_all = parse_lammps_dump("../data/hbn_lammps_dump.dat", use_last_frame=True)
 print(df_all.head())
 print("\\nAtom types distribution:")
 print(df_all["type"].value_counts().sort_index())

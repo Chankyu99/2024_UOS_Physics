@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Jupyter
+.ipynb_checkpoints/
+*_executed.ipynb
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+
+# Large data files (track with Git LFS if needed)
+data/dump.minimization
+data/Input_data.txt
+data/rewq*.txt
+data/untitled.txt
+data/gr_3dbands.*
+data/bn2_3Dbands.*
+data/bn_3Dbands.*
+data/g_3Dbands.*
+
+# Temporary files
+*.tmp
+*.bak
