@@ -39,6 +39,7 @@ Quantum ESPRESSO DFT 계산 결과 — Graphene과 hexagonal Boron Nitride(h-BN)
 cells.append(new_markdown_cell("### 1-1. Graphene — 2D Band Structure & DOS"))
 
 cells.append(new_code_cell("""\
+%matplotlib inline
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -310,152 +311,192 @@ print(df_pairs[["dist_xy", "dz"]].describe().round(4))
 
 # ─── 2-3 Label Generation ──────────────────────────────────────────────────
 cells.append(new_markdown_cell("""\
-### 2-3. 레이블 생성 — Out-of-plane Displacement 기반 KMeans 클러스터링
+### 2-3. 레이블 생성 — Out-of-plane Displacement 기반 KMeans
 
-물리적으로 AA/AB/BA 스태킹은 서로 다른 층간 거리(out-of-plane 변위)를 가집니다.  
-`dz`(upper_z − lower_z)와 `dist_xy`(면내 거리)를 피처로 KMeans(k=3) 클러스터링합니다.
+**물리적 근거**: AA/AB/BA 스태킹은 층간 z 거리(`dz`)가 서로 다릅니다.
+- **AA**: 원자가 정확히 겹쳐 반발 → dz 가장 큼
+- **AB / BA**: 안정 스태킹 → dz 작음
+
+KMeans(k=3)로 클러스터 구분 후 평균 dz 순서로 AA/AB/BA 레이블을 부여합니다.
+
+> **주의**: 레이블 생성에 `dz`와 `dist_xy`를 사용합니다. 동일 피처를 분류기에 입력하면 **Data Leakage**가 발생합니다. 아래 2-4절에서 진단합니다.
 """))
 
 cells.append(new_code_cell("""\
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
-# 클러스터링 피처
-cluster_feats = df_pairs[["dz", "dist_xy"]].values
+LABEL_FEATS = ["dz", "dist_xy"]
 scaler_c = StandardScaler()
-cluster_feats_scaled = scaler_c.fit_transform(cluster_feats)
+cf_scaled = scaler_c.fit_transform(df_pairs[LABEL_FEATS].values)
 
-# KMeans k=3 (AA, AB, BA)
 km = KMeans(n_clusters=3, random_state=42, n_init=20)
-df_pairs["cluster"] = km.fit_predict(cluster_feats_scaled)
+df_pairs["cluster"] = km.fit_predict(cf_scaled)
 
-# ── 클러스터 물리적 의미 부여 ────────────────────────────────────────────
 cluster_stats = df_pairs.groupby("cluster")[["dz", "dist_xy"]].mean().round(4)
-print("Cluster statistics (mean):")
+print("Cluster mean statistics:")
 print(cluster_stats)
 
-# dz 기준: AA(가장 큼) > AB ≈ BA
-# dist_xy: AA(가장 작음, 원자가 겹침)
-dz_by_cluster = cluster_stats["dz"]
-sorted_clusters = dz_by_cluster.sort_values(ascending=False).index.tolist()
-
-label_map = {}
-label_map[sorted_clusters[0]] = "AA"    # dz 가장 큰 클러스터
-label_map[sorted_clusters[1]] = "AB"
-label_map[sorted_clusters[2]] = "BA"
-
+dz_sorted = cluster_stats["dz"].sort_values(ascending=False)
+label_map = {dz_sorted.index[0]: "AA", dz_sorted.index[1]: "AB", dz_sorted.index[2]: "BA"}
 df_pairs["stack"] = df_pairs["cluster"].map(label_map)
 print("\\nStacking label distribution:")
 print(df_pairs["stack"].value_counts())
+print("\\ndz by label (mean +/- std):")
+print(df_pairs.groupby("stack")["dz"].agg(["mean","std"]).round(5))
 """))
 
-# ─── 2-4 ML Classification ─────────────────────────────────────────────────
-cells.append(new_markdown_cell("### 2-4. ML 분류 — Random Forest Classifier"))
+# ─── 2-4 Leakage Diagnosis & Fair Evaluation ─────────────────────────────
+cells.append(new_markdown_cell("""\
+### 2-4. Data Leakage 진단 및 공정한 평가
+
+#### 기존 파이프라인의 문제점
+
+| 단계 | 사용 피처 |
+|------|----------|
+| 레이블 생성 (KMeans) | `dz`, `dist_xy` |
+| RF 분류기 입력 (기존 잘못된 설계) | 8개 전체 피처 (`dz`, `dist_xy` 포함) |
+
+→ **Data Leakage**: 레이블을 정의한 피처로 분류기를 학습시키면 KMeans 경계를 그대로 암기  
+→ Acc 100%는 실제 일반화 성능이 아닌 **순환 논리(circular reasoning)**
+
+#### 공정한 실험 설계 (leakage 제거)
+
+| 모델 | 피처 | 의도 |
+|------|------|------|
+| Full (leakage) | 8개 전체 | 기준선 (틀린 설계) |
+| **Physics-aware** | `ux, uy, uz, lx, ly, lz` | z 위치 포함, dz/dist_xy 유도 피처 제외 |
+| Spatial-only | `ux, uy, lx, ly` | xy 위치만 |
+"""))
 
 cells.append(new_code_cell("""\
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import seaborn as sns
 
-# ── 피처 & 레이블 ─────────────────────────────────────────────────────────
-FEATURES = ["ux", "uy", "uz", "lx", "ly", "lz", "dist_xy", "dz"]
-X = df_pairs[FEATURES].values
 y = df_pairs["stack"].values
 
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
+# ── Experiment 1: Full (leakage 포함) ─────────────────────────────────────
+FULL_FEATS = ["ux", "uy", "uz", "lx", "ly", "lz", "dist_xy", "dz"]
+X_full = StandardScaler().fit_transform(df_pairs[FULL_FEATS].values)
+Xtr_f, Xte_f, ytr_f, yte_f = train_test_split(X_full, y, test_size=0.2, random_state=42, stratify=y)
+rf_full = RandomForestClassifier(200, random_state=42, n_jobs=-1)
+rf_full.fit(Xtr_f, ytr_f)
+acc_full = accuracy_score(yte_f, rf_full.predict(Xte_f))
+cv_full  = cross_val_score(rf_full, X_full, y, cv=5, n_jobs=-1)
+leakage_imp = rf_full.feature_importances_[FULL_FEATS.index("dz")] + rf_full.feature_importances_[FULL_FEATS.index("dist_xy")]
 
-X_train, X_test, y_train, y_test = train_test_split(
-    X_scaled, y, test_size=0.2, random_state=42, stratify=y
-)
+# ── Experiment 2: Physics-aware (leakage 제거, z 위치 포함) ──────────────
+PHYS_FEATS = ["ux", "uy", "uz", "lx", "ly", "lz"]
+X_phy  = StandardScaler().fit_transform(df_pairs[PHYS_FEATS].values)
+Xtr_p, Xte_p, ytr_p, yte_p = train_test_split(X_phy, y, test_size=0.2, random_state=42, stratify=y)
+rf_phy = RandomForestClassifier(200, random_state=42, n_jobs=-1)
+rf_phy.fit(Xtr_p, ytr_p)
+acc_phy = accuracy_score(yte_p, rf_phy.predict(Xte_p))
+cv_phy  = cross_val_score(rf_phy, X_phy, y, cv=5, n_jobs=-1)
 
-# ── Random Forest ─────────────────────────────────────────────────────────
-rf = RandomForestClassifier(n_estimators=200, max_depth=None,
-                             min_samples_leaf=2, random_state=42, n_jobs=-1)
-rf.fit(X_train, y_train)
-y_pred_rf = rf.predict(X_test)
-acc_rf = accuracy_score(y_test, y_pred_rf)
+# ── Experiment 3: Spatial-only (xy 좌표만) ───────────────────────────────
+SPATIAL_FEATS = ["ux", "uy", "lx", "ly"]
+X_spa  = StandardScaler().fit_transform(df_pairs[SPATIAL_FEATS].values)
+Xtr_s, Xte_s, ytr_s, yte_s = train_test_split(X_spa, y, test_size=0.2, random_state=42, stratify=y)
+rf_spa = RandomForestClassifier(200, random_state=42, n_jobs=-1)
+rf_spa.fit(Xtr_s, ytr_s)
+acc_spa = accuracy_score(yte_s, rf_spa.predict(Xte_s))
+cv_spa  = cross_val_score(rf_spa, X_spa, y, cv=5, n_jobs=-1)
 
-# ── 교차검증 ──────────────────────────────────────────────────────────────
-cv_scores = cross_val_score(rf, X_scaled, y, cv=5, scoring="accuracy", n_jobs=-1)
-
-print(f"Random Forest Test Accuracy : {acc_rf*100:.2f}%")
-print(f"5-Fold CV Accuracy           : {cv_scores.mean()*100:.2f}% ± {cv_scores.std()*100:.2f}%")
-print()
-print(classification_report(y_test, y_pred_rf, target_names=["AA","AB","BA"]))
+print("=" * 65)
+print(f"  {'Model':<20} | {'Test Acc':>8} | {'5-CV Mean':>9} | {'5-CV Std':>8}")
+print("-" * 65)
+print(f"  {'Full (leakage)':<20} | {acc_full*100:>7.2f}% | {cv_full.mean()*100:>8.2f}% | +/-{cv_full.std()*100:.2f}%")
+print(f"  {'Physics-aware':<20} | {acc_phy*100:>7.2f}% | {cv_phy.mean()*100:>8.2f}% | +/-{cv_phy.std()*100:.2f}%")
+print(f"  {'Spatial-only':<20} | {acc_spa*100:>7.2f}% | {cv_spa.mean()*100:>8.2f}% | +/-{cv_spa.std()*100:.2f}%")
+print("=" * 65)
+print(f"\\n[진단] Full 모델의 dz+dist_xy 피처 중요도 합: {leakage_imp*100:.1f}%")
+print(f"       -> Data Leakage {'확인됨' if leakage_imp > 0.5 else '없음'} (기준 50%)")
+print(f"\\n[결론] 신뢰할 수 있는 분류 성능: Physics-aware = {acc_phy*100:.1f}%")
+print(classification_report(yte_p, rf_phy.predict(Xte_p), target_names=["AA","AB","BA"]))
 """))
 
-# ─── 2-5 Confusion matrix & Feature importance ─────────────────────────────
+# ─── 2-5 Visualization ───────────────────────────────────────────────────
+cells.append(new_markdown_cell("### 2-5. 결과 시각화 — Leakage 진단 & 공정 평가"))
+
 cells.append(new_code_cell("""\
-fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
-# ── Confusion matrix ──────────────────────────────────────────────────────
-cm = confusion_matrix(y_test, y_pred_rf, labels=["AA","AB","BA"])
-sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
-            xticklabels=["AA","AB","BA"],
-            yticklabels=["AA","AB","BA"], ax=axes[0])
-axes[0].set_xlabel("Predicted")
-axes[0].set_ylabel("Actual")
-axes[0].set_title(f"Confusion Matrix (Test Acc: {acc_rf*100:.1f}%)")
-
-# ── Feature importance ────────────────────────────────────────────────────
-importances = rf.feature_importances_
-feat_df = pd.DataFrame({"feature": FEATURES, "importance": importances})
+# (A) Feature Importance — leakage 시각화
+feat_df = pd.DataFrame({"feature": FULL_FEATS, "importance": rf_full.feature_importances_})
 feat_df = feat_df.sort_values("importance", ascending=True)
-colors = ["#4a9896" if imp > 0.1 else "#c0c0c0" for imp in feat_df["importance"]]
-axes[1].barh(feat_df["feature"], feat_df["importance"], color=colors)
-axes[1].set_xlabel("Importance")
-axes[1].set_title("Feature Importance")
-axes[1].axvline(0.1, ls="--", lw=0.8, color="gray")
+bar_colors = ["#c0392b" if f in ["dz","dist_xy"] else "#4a9896" for f in feat_df["feature"]]
+axes[0].barh(feat_df["feature"], feat_df["importance"], color=bar_colors)
+axes[0].set_xlabel("Importance")
+axes[0].set_title("Feature Importance (Full model)\\n[Red = leakage features]")
+axes[0].axvline(0.1, ls="--", lw=0.8, color="gray")
+
+# (B) Confusion Matrix — Physics-aware
+cm = confusion_matrix(yte_p, rf_phy.predict(Xte_p), labels=["AA","AB","BA"])
+sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
+            xticklabels=["AA","AB","BA"], yticklabels=["AA","AB","BA"], ax=axes[1])
+axes[1].set_xlabel("Predicted"); axes[1].set_ylabel("Actual")
+axes[1].set_title(f"Physics-aware Confusion Matrix\\nTest Acc: {acc_phy*100:.1f}%")
+
+# (C) 모델 비교
+models = ["Full\\n(leakage)", "Physics-\\naware", "Spatial\\nonly"]
+accs   = [acc_full*100, acc_phy*100, acc_spa*100]
+cvs    = [cv_full.std()*100, cv_phy.std()*100, cv_spa.std()*100]
+bar_cs = ["#e74c3c", "#27ae60", "#3498db"]
+bars   = axes[2].bar(models, accs, color=bar_cs, alpha=0.85, yerr=cvs, capsize=6)
+axes[2].set_ylim(0, 115); axes[2].set_ylabel("Accuracy (%)")
+axes[2].set_title("Model Comparison\\n(leakage vs. fair evaluation)")
+for bar, acc in zip(bars, accs):
+    axes[2].text(bar.get_x()+bar.get_width()/2, acc+1.5,
+                 f"{acc:.1f}%", ha="center", fontweight="bold", fontsize=10)
 
 plt.tight_layout()
 plt.savefig("../data/ml_confusion_importance.png", bbox_inches="tight", dpi=150)
 plt.show()
 """))
 
-# ─── 2-6 Domain Map ────────────────────────────────────────────────────────
-cells.append(new_markdown_cell("### 2-5. 결과 시각화 — 모아레 도메인 맵 (포스터 Fig.5 재현)"))
+# ─── 2-6 Domain Map ──────────────────────────────────────────────────────
+cells.append(new_markdown_cell("### 2-6. 모아레 도메인 맵 (포스터 Fig.5 재현)"))
 
 cells.append(new_code_cell("""\
 from matplotlib.patches import Patch
-
 COLOR_MAP = {"AA": "#2166ac", "AB": "#d6604d", "BA": "#4dac26"}
 
-fig, axes = plt.subplots(1, 2, figsize=(16, 7))
+# Physics-aware 예측 (전체 데이터)
+X_all = StandardScaler().fit_transform(df_pairs[PHYS_FEATS].values)
+df_pairs["pred_stack"] = rf_phy.predict(X_all)
 
-for ax, layer_xy, layer_label, title in [
-    (axes[0], (df_pairs["lx"], df_pairs["ly"]), "stack", "Lower layer (type 1+2, B+N)"),
-    (axes[1], (df_pairs["ux"], df_pairs["uy"]), "stack", "Upper layer (type 3+4, B+N)"),
+fig, axes = plt.subplots(1, 2, figsize=(16, 7))
+for ax, col, title in [
+    (axes[0], "stack",      "KMeans Label (Ground Truth)"),
+    (axes[1], "pred_stack", f"RF Prediction — Physics-aware ({acc_phy*100:.0f}%)"),
 ]:
     for label, color in COLOR_MAP.items():
-        mask = df_pairs[layer_label] == label
-        ax.scatter(layer_xy[0][mask], layer_xy[1][mask],
-                   s=1.5, color=color, alpha=0.8, label=label, rasterized=True)
-    ax.set_xlabel("x (Å)")
-    ax.set_ylabel("y (Å)")
-    ax.set_title(title, fontsize=12)
-    ax.set_aspect("equal")
+        m = df_pairs[col] == label
+        axes[list(axes).index(ax)].scatter(
+            df_pairs["ux"][m], df_pairs["uy"][m],
+            s=1.5, color=color, alpha=0.8, rasterized=True, label=label)
+    ax.set_xlabel("x (Ang)"); ax.set_ylabel("y (Ang)")
+    ax.set_title(title, fontsize=11); ax.set_aspect("equal")
 
 legend_elements = [Patch(facecolor=c, label=l) for l, c in COLOR_MAP.items()]
 fig.legend(handles=legend_elements, loc="lower center", ncol=3,
            fontsize=12, frameon=False, bbox_to_anchor=(0.5, -0.03))
-
-plt.suptitle(
-    "Twisted Bilayer h-BN (1.08°) — Moiré Stacking Domain Map",
-    fontsize=14, fontweight="bold"
-)
+plt.suptitle("Twisted Bilayer h-BN (1.08°) - Moire Stacking Domain Map",
+             fontsize=14, fontweight="bold")
 plt.tight_layout()
 plt.savefig("../data/moire_domain_map.png", bbox_inches="tight", dpi=150)
 plt.show()
 
-print("\\n=== ML Pipeline Summary ===")
-print(f"  Total atoms processed : {len(df_pairs):,}")
-print(f"  Features used         : {FEATURES}")
-print(f"  Random Forest Acc     : {acc_rf*100:.2f}%")
-print(f"  5-fold CV Acc         : {cv_scores.mean()*100:.2f}% ± {cv_scores.std()*100:.2f}%")
-print(f"  Stacking distribution : {df_pairs['stack'].value_counts().to_dict()}")
+print("\\n=== ML Pipeline Summary (Fair Evaluation) ===")
+print(f"  Label 생성 피처    : dz, dist_xy  (KMeans k=3)")
+print(f"  분류 피처 (공정)   : {PHYS_FEATS}")
+print(f"  Physics-aware Acc : {acc_phy*100:.2f}%  (5-CV: {cv_phy.mean()*100:.2f}% +/- {cv_phy.std()*100:.2f}%)")
+print(f"  Stacking 분포      : {df_pairs['stack'].value_counts().to_dict()}")
 """))
+
 
 # ── PART 3: SUMMARY ─────────────────────────────────────────────────────────
 cells.append(new_markdown_cell("""\
