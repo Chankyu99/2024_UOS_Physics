@@ -80,6 +80,9 @@ Stacking Region Identification (AA / AB / BA)
 └── README.md
 ```
 
+![2024 고체물리 인턴 연구 포스터](./2024 고체물리 인턴 연구 포스터.png)
+
+
 ---
 
 ## 📊 Key Results
