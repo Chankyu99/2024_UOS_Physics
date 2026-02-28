@@ -1,5 +1,7 @@
 # 2024 UOS Physics Internship: Twisted Bilayer h-BN ML Study
 
+![2024 고체물리 인턴 연구 포스터](poster.png)
+
 > **서울시립대학교 물리학과 하계 인턴십 (2024)**  
 > 뒤틀린 이중층 헥사고날 보론 나이트라이드(Twisted Bilayer h-BN)의 모아레 패턴을 DFT + LAMMPS + ML로 분류
 
@@ -79,9 +81,6 @@ Stacking Region Identification (AA / AB / BA)
 ├── requirements.txt
 └── README.md
 ```
-
-![2024 고체물리 인턴 연구 포스터](./2024 고체물리 인턴 연구 포스터.png)
-
 
 ---
 
