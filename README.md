@@ -1,44 +1,21 @@
-# 2024 UOS Physics Internship: Twisted Bilayer h-BN ML Study
+# 2024 UOS Physics Internship
+
+> **서울시립대학교 물리학과 하계 인턴십 (2024)**  
+> Band Structure of Graphene/h-BN and Stacking Classification in Moiré Patterns Using Machine Learning
 
 ![2024 고체물리 인턴 연구 포스터](poster.png)
 
-> **서울시립대학교 물리학과 하계 인턴십 (2024)**  
-> 뒤틀린 이중층 헥사고날 보론 나이트라이드(Twisted Bilayer h-BN)의 모아레 패턴을 DFT + LAMMPS + ML로 분류
+---
+
+## 연구 배경
+
+뒤틀린 이중층 그래핀은 특정 각도(1.08°, 이하 Magic Angle)에서 초전도성을 나타내는 물질로, 2018년 Nature에 발표된 이후 응집물질물리학의 핵심 연구 주제가 되었습니다. 본 프로젝트는 DFT(Density Functional Theory) 시뮬레이션으로 생성된 대규모 전자구조 데이터를 기반으로, **Moiré Pattern 의 Stacking 영역 분류 문제를 머신러닝으로 접근**한 연구입니다.
 
 ---
 
-## 📌 Research Background
+## 전체 아키텍처
 
-뒤틀린 이중층 그래핀은 특정 "매직 각도(~1.1°)"에서 초전도성을 나타내는 물질로, 2018년 Nature에 발표된 이후 응집물질물리학의 핵심 연구 주제가 되었습니다. 본 프로젝트는 DFT(Density Functional Theory) 시뮬레이션으로 생성된 대규모 전자구조 데이터를 기반으로, **모아레 초격자의 도메인 분류 문제를 머신러닝으로 접근**한 연구입니다.
-
----
-
-## 🧠 ML Pipeline
-
-```
-DFT Simulation (Quantum ESPRESSO)
-        ↓
-Raw band structure / PDOS data
-        ↓  [data/]
-Data Engineering (Python)
-        ↓  [src/]
-Feature Extraction + Preprocessing
-        ↓  [notebooks/]
-Domain Classification (ML)
-        ↓
-Stacking Region Identification (AA / AB / BA)
-```
-
-### Key Components
-
-| Module | 역할 |
-|--------|------|
-| `src/twister.py` | 뒤틀림 각도별 초격자 좌표 생성 |
-| `src/funcs.py` | 밴드구조·PDOS 파싱 및 피처 추출 유틸 |
-| `src/tovasp.py` | VASP 입력 포맷 변환 |
-| `src/plot.py` | 시각화 헬퍼 함수 |
-| `notebooks/2024_고체물리인턴_포폴용.ipynb` | **메인 포트폴리오 노트북** (EDA → 분류) |
-| `notebooks/Twisted_layerplot_DomainClassification.ipynb` | 도메인 분류 실험 |
+![Architecture](architecture.png)
 
 ---
 
@@ -61,10 +38,10 @@ Stacking Region Identification (AA / AB / BA)
 │   ├── hbn_input_data.txt             # 메인 입력 데이터
 │   └── *.png                          # 시각화 결과 이미지
 ├── notebooks/
-│   ├── 2024_고체물리인턴_포폴용.ipynb   ← 메인 포트폴리오
-│   ├── domain_classification.ipynb    # 도메인 분류 실험
-│   ├── 2024_summer_solid_state.ipynb  # 여름방학 스터디 노트
-│   ├── tutorial_dft_qe.ipynb          # QE DFT 튜토리얼
+│   ├── 2024_portfolio_internship.ipynb   # 메인 Notebook
+│   ├── domain_classification.ipynb       # 도메인 분류 실험
+│   ├── 2024_summer_solid_state.ipynb     # 여름방학 스터디 노트
+│   ├── tutorial_dft_qe.ipynb             # QE DFT 튜토리얼
 │   ├── 2024_08_07_dft_notes.ipynb
 │   ├── 2024_08_12_notes.ipynb
 │   └── archive/                       # 임시 노트북 보관
@@ -73,10 +50,7 @@ Stacking Region Identification (AA / AB / BA)
 │   ├── twister.py                     # 초격자 좌표 생성
 │   ├── funcs.py                       # 파싱·피처 추출 유틸
 │   ├── tovasp.py                      # VASP 포맷 변환
-│   └── plot.py                        # 시각화 CLI 모듈
-├── 2024 고체물리 인턴 연구 포스터.pdf
-├── 참고논문.pdf
-├── build_notebook.py                  # 포트폴리오 노트북 빌드 스크립트
+│   └── plot.py                        # 시각화 CLI 모듈                
 ├── .gitignore
 ├── requirements.txt
 └── README.md
@@ -84,9 +58,9 @@ Stacking Region Identification (AA / AB / BA)
 
 ---
 
-## 📊 Key Results
+## 📊 주요 결과
 
-### ML Classification (Twisted Bilayer h-BN θ = 1.08°)
+### ML 분류 (Twisted Bilayer h-BN θ = 1.08°)
 
 | 항목 | 값 |
 |------|-----|
@@ -94,8 +68,12 @@ Stacking Region Identification (AA / AB / BA)
 | 레이어 분리 | lower B/N (type 1+2): 5,582개 / upper B/N (type 3+4): 5,582개 |
 | 층간 거리 (interlayer Δz) | **3.273 Å** |
 | ML 모델 | Random Forest (n_estimators=200, 5-fold CV) |
-| **Test Accuracy** | **100.00%** |
-| **5-fold CV** | **99.98% ± 0.04%** |
+| **Physics-Aware Model (Test Accuracy)** | **91.94%** (Data Leakage 배제 기준) |
+| **Physics-Aware Model (5-fold CV)** | **26.24% ± 4.89%** |
+| **Full Model (Test Accuracy)** | **100.00%** (Data Leakage 포함 시) |
+| **Full Model (5-fold CV)** | **99.98% ± 0.04%** |
+
+> **Note**: 기존 `dz` 및 `dist_xy` 피처를 그대로 훈련에 포함할 경우 100%의 정확도가 나오나 이는 순환 논리에 의한 데이터 누수(Data Leakage)입니다. 이를 제거하고 오직 원자들의 x, y, z 좌표값만을 사용한 Physics-Aware 모델에서는 테스트 셋 기준 91.94%의 정확도를 보였습니다.
 
 ### Stacking Domain Distribution
 
