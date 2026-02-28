@@ -1,25 +1,16 @@
 # 2024 UOS Physics Internship
 
-> **서울시립대학교 물리학과 하계 인턴십 (2024)**  
-> Band Structure of Graphene/h-BN and Stacking Classification in Moiré Patterns Using Machine Learning
-
 ![2024 고체물리 인턴 연구 포스터](poster.png)
 
 ---
 
-## 연구 배경
-
-뒤틀린 이중층 그래핀은 특정 각도(1.08°, 이하 Magic Angle)에서 초전도성을 나타내는 물질로, 2018년 Nature에 발표된 이후 응집물질물리학의 핵심 연구 주제가 되었습니다. 본 프로젝트는 DFT(Density Functional Theory) 시뮬레이션으로 생성된 대규모 전자구조 데이터를 기반으로, **Moiré Pattern 의 Stacking 영역 분류 문제를 머신러닝으로 접근**한 연구입니다.
-
----
-
-## 전체 아키텍처
+## Architecture
 
 ![Architecture](architecture.png)
 
 ---
 
-## 🗂️ Directory Structure
+## Directory Structure
 
 ```
 2024_UOS_Physics/
@@ -58,6 +49,27 @@
 
 ---
 
+### 문제 (Problem)
+
+- 데이터 누수 : K-Means로 스태킹 레이블을 생성할 때 사용한 결정 기준(`dz`, `dist_xy`)을 Random Forest 모델 피처에 그대로 넣어버려 정확도 100%라는 비정상적인 데이터 누수(Data Leakage) 상태가 발생했습니다.
+- 데이터 파싱 : LAMMPS 시뮬레이션의 `dump.minimization` 결과 파일은 수만 줄의 비정형 텍스트로 구성되어 있어, 모델에 즉시 적용할 수 없었고 수작업 시 파이프라인의 재현성을 훼손하는 병목이 있었습니다.
+- 연산 비효율 : 1.08도 뒤틀린 초격자 시스템 내의 11,164개 상·하층 원자 간 거리를 브루트포스(Brute-force)로 일일이 비교 연산하면 $O(N^2)$ 복잡도로 인해 처리 시간에 심각한 과부하가 걸렸습니다.
+
+### 해결 (Solution)
+
+- 피처 통제 및 순환 논리 교정: 단순한 정확도 수치에 안주하지 않고 스스로 문제 원인을 진단하여, 정답을 유추할 수 있는 파생 변수를 모델 훈련 데이터에서 완벽히 제거해 모델을 재설계했습니다.
+- 단일 파이프라인 자동화: 텍스트 파일 내의 `ITEM` 구조를 탐색하여 완화된 최종 Timestep의 원자 ID, 타입, 3D 좌표만을 동적으로 추출해 Pandas DataFrame으로 즉시 변환하는 Python 자동화 파싱 스크립트를 구현했습니다.
+- 자료구조 기반 공간 탐색 도입: 반복문 대신 SciPy의 $K$-Dimensional Tree(cKDTree) 알고리즘을 도입했습니다. 하층부 원자로 트리를 구축하고 상층부 원자를 Query 하는 방식으로 $O(N \log N)$ 수준으로 탐색 최적화를 이루었습니다.
+
+### 결과 (Result)
+
+- 도메인 모델 신뢰성 : 데이터 누수 요인을 제거한 엄격한 조건에서도 모델이 개별 원자의 순수한 3D 공간 좌표만을 통해 **91.94%**의 공정한 Test Accuracy를 도출해 내며 신뢰성을 검증했습니다.
+- 재현성과 확장성 : 수작업을 배제하고 단 몇 초 만에 처리되는 자동 파싱부터 ML 검증, 시각화에 이르는 엔드투엔드 노트북 파이프라인을 구축하여 향후 진행될 타 각도(2도, 3도) 실험에서도 별도의 수정 없이 재현 가능한 환경을 마련했습니다.
+- **대규모 연산 최적화**: $O(N^2)$ 루프(11,164 원자) → **≈ 0.8 s** → cKDTree 기반 $O(N \log N)$ 알고리즘 적용으로 **≈ 0.001–0.002 s** 로 단축해, 연산속도를 약 **500배** 빠르게 만들었습니다.
+
+
+---
+
 ## 📊 주요 결과
 
 ### ML 분류 (Twisted Bilayer h-BN θ = 1.08°)
@@ -73,8 +85,6 @@
 | **Full Model (Test Accuracy)** | **100.00%** (Data Leakage 포함 시) |
 | **Full Model (5-fold CV)** | **99.98% ± 0.04%** |
 
-> **Note**: 기존 `dz` 및 `dist_xy` 피처를 그대로 훈련에 포함할 경우 100%의 정확도가 나오나 이는 순환 논리에 의한 데이터 누수(Data Leakage)입니다. 이를 제거하고 오직 원자들의 x, y, z 좌표값만을 사용한 Physics-Aware 모델에서는 테스트 셋 기준 91.94%의 정확도를 보였습니다.
-
 ### Stacking Domain Distribution
 
 | 도메인 | 원자 쌍 수 | 비율 | 물리적 의미 |
@@ -88,21 +98,7 @@
 
 ---
 
-## ⚙️ Setup
-
-```bash
-# 가상환경 생성 및 패키지 설치
-python -m venv venv
-source venv/bin/activate       # macOS/Linux
-pip install -r requirements.txt
-
-# Jupyter 실행
-jupyter notebook notebooks/
-```
-
----
-
-## 📎 References
+## References
 
 1. Li, F., Lee, D., Leconte, N., Javvaji, S., & Jung, J. (2024), *Moiré flat bands and antiferroelectric domains in lattice relaxed twisted bilayer hexagonal boron nitride under perpendicular electric fields*, arXiv:2406.12231
 2. Naik, S. et al. (2022). *Twister: Construction and structural relaxation of commensurate Moiré superlattices*, ScienceDirect
