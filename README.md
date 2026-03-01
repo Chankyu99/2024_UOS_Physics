@@ -90,8 +90,6 @@
 | ML 모델 | Random Forest (n_estimators=200, 5-fold CV) |
 | **Test Accuracy** | **91.94%** (Data Leakage 배제 기준) |
 | **5-fold CV** | **26.24% ± 4.89%** |
-| **Test Accuracy** | **100.00%** (Data Leakage 포함 시) |
-| **5-fold CV** | **99.98% ± 0.04%** |
 
 ### Stacking Domain Distribution
 
