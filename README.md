@@ -108,6 +108,5 @@
 
 1. Li, F., Lee, D., Leconte, N., Javvaji, S., & Jung, J. (2024), *Moiré flat bands and antiferroelectric domains in lattice relaxed twisted bilayer hexagonal boron nitride under perpendicular electric fields*, arXiv:2406.12231
 2. Naik, S. et al. (2022). *Twister: Construction and structural relaxation of commensurate Moiré superlattices*, ScienceDirect
-3. Cao, Y. et al. (2018). *Unconventional superconductivity in magic-angle graphene superlattices.* **Nature** 556, 43–50
-4. Quantum ESPRESSO: [quantum-espresso.org](https://www.quantum-espresso.org)
-5. LAMMPS: [lammps.org](https://www.lammps.org)
+3. Quantum ESPRESSO: [quantum-espresso.org](https://www.quantum-espresso.org)
+4. LAMMPS: [lammps.org](https://www.lammps.org)
