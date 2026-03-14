@@ -40,9 +40,7 @@
 │   ├── hbn_lammps_dump.dat               # LAMMPS 완화 결과 (ML 입력)
 │   ├── hbn_superlattice_coordinates.dat  # 초격자 좌표
 │   ├── hbn_twist_input.inp               # Twister 입력 파라미터 (θ = 1.08°)
-│   ├── hbn_input_parameters.txt          # 메인 입력 파라미터 데이터
-│   ├── bands.dat.gnu                     # 기타 밴드구조 1
-│   └── bands.dat(1).gnu                  # 기타 밴드구조 2
+│   └── hbn_input_parameters.txt          # 메인 입력 파라미터 데이터
 ├── img/
 │   ├── result/                           # 완성된 시각화 디렉토리
 │   └── visualization/                    # 시각화 분석 디렉토리
