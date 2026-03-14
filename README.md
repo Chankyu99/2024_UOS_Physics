@@ -53,9 +53,9 @@
 │   ├── tovasp.py                         # VASP 포맷 변환
 │   └── plot.py                           # 시각화 CLI 모듈
 ├── Notebook.ipynb                        # 메인 머신러닝 분석 노트북
-├── graphene_band_structure.ipynb         # Graphene 밴드구조 스터디 노트
-├── requirements.txt                      # 의존성 패키지 목록
-└── README.md                             # 메인 Readme 마크다운 파일
+├── graphene_band_structure.ipynb         # Graphene 밴드구조 스터디 노트 (메인 노트북 참고용)
+├── requirements.txt                      # 환경 패키지 목록
+└── README.md                             # 메인 README.md
 ```
 
 ---
