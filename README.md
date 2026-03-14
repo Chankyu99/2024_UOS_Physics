@@ -60,15 +60,50 @@
 
 ---
 
-본 프로젝트는 '트위스티드 이중층 h-BN(Twisted Bilayer h-BN)'의 Moiré 패턴 시뮬레이션 데이터를 머신러닝(ML) 앙상블 기법으로 분석하여 스태킹 도메인(Stacking Domain, AA/AB/BA)을 자동 분류하고 검증하는 자동화 시스템 구축을 목표로 진행되었습니다. 기존 고체물리 연구에서는 초기 초격자(Superlattice) 구축 후 LAMMPS 등 텍스트 기반 덤프(Dump) 파일로 추출되는 수만 개 원자의 3D 좌표를 육안 및 수작업으로 파싱해야 했으며, 브루트포스(Brute-force, $O(N^2)$) 방식의 계산 구조로 인해 대규모 시스템 분석 시 심각한 연산 과부하가 발생했습니다. 이에 본 연구는 단순 3D 좌표 변수만으로도 물리적인 특성 분포를 정확히 묶어낼 수 있도록 전처리(Parsing)-군집화(K-Means)-교차평가(Random Forest)-벌집 맵 시각화에 이르는 일련의 데이터 사이언스 파이프라인을 설계했습니다.
+## 문제 정의
 
-특히 머신러닝 방법론 적용에 있어, 평가 모델(RF) 학습 시 사전 군집화의 핵심 지표가 되는 파생 변수(dz, dist_xy)가 필연적으로 데이터 누수(Data Leakage)를 유발함을 Feature Importance 분석을 통해 논리적으로 진단하고 과감히 배제했습니다. K-Means의 비지도(Unsupervised) 클러스터 방식으로 도메인 간의 Pseudo-Label을 형성한 후, 이를 다시 누수 변수가 차단된 가장 엄격한 차원(순수 공간 좌표)에서 앙상블 트리에 투입하여 분류 성능을 검증했습니다. 또한 SciPy 라이브러리의 cKDTree 알고리즘을 도입해 물리적인 최단 이웃 탐색 복잡도를 $O(N\log N)$ 스케일로 최적화함으로써 11,164개 원자 연산에 소요되는 시간을 수백 배(0.8초 $\rightarrow$ 0.002초) 이상 비약적으로 고속화하는 성과를 이뤘습니다.
+- 뒤틀림 격자(Moiré Superlattice) 단면 시뮬레이션(LAMMPS relaxation) 데이터에는 수만 개에 달하는 원자의 3D 좌표만 비정형하게 나열되어 있어, 어느 영역이 안정 상태(AB, BA)이고 불안정 상태(AA)인지 분석하려면 육안이나 수작업 병목이 심함
+- 기존 브루트포스(Brute-force) 방식의 원자 쌍 거리 계산 시 공간 복잡도가 $O(N^2)$에 달해, 대규모 초격자 시스템 연구에 있어 연산 과부하가 발생
 
-결과적으로, 새롭게 고안한 Baseline 모델은 오버피팅과 데이터 누수 요소가 전혀 없는 투명한 조건 아래서도 91.94%에 육박하는 높은 Test Accuracy를 기록하며 Moiré 패턴의 이론적 격자 완화(Lattice relaxation) 도메인 특성 비율을 완벽하게 재구성했습니다. 이는 기존의 수작업 개입과 개별 스크립트에 의존하던 데이터 분석 및 시각화 과정을 몇 초 내로 완결 짓는 하나의 End-to-End 자동화 파이프라인(Object-Oriented Module)으로 추상화하였음을 뜻합니다. 궁극적으로 이번 결과물은 향후 서로 다른 비틀림 각도(Twist Angle)를 갖거나 훨씬 방대한 스케일의 2차원 물질(Graphene 등) 시스템이 도래하더라도 수정 비용 없이 그 기하학적 분포 특성을 즉시 판독해 낼 수 있는, 소재 정보학(Materials Informatics) 관점에서의 유연한 솔루션 프레임워크를 구축하였다는 데 큰 의의가 있습니다.
+## 프로젝트 목표
 
----
+- 방대한 원자 시뮬레이션 데이터를 전처리부터 모델 학습, 성능 평가, 그리고 벌집 맵(Honeycomb Map) 시각화까지 처리하는 End-to-End 예측 자동화 파이프라인을 구축
 
-## Conclusion
+## 선행 연구 및 사례 분석
+
+### 선행 연구 검토
+- Li et al. (2024): 층간 완화(Lattice relaxation) 현상에 의하여 반발력이 높은 AA 도메인은 좁게 수축하고, 에너지적으로 안정된 AB/BA 도메인이 넓게 확장된다는 이론적 배경을 제공합니다. 본 예측 결과 역시 이와 완벽하게 일치해야 합니다.
+
+### 유사 프로젝트 사례
+- 자성/비자성 물질의 결정 구조 데이터에 차원 축소 맵핑이나 딥러닝(GNN 등)을 적용해 스태킹 결함을 탐지하는 다양한 최신 소재 정보학사례들이 존재
+
+## 데이터 수집 및 준비
+
+### 데이터 소스
+- Twister 도구를 통해 초기 초격자를 구축하고, 이를 LAMMPS로 구조 완화시킨 텍스트 형태의 덤프 파일 (hbn_lammps_dump.dat, 약 1.1만 개 원자 행, 8MB).
+
+### 데이터 전처리
+  - 원시 텍스트 파일 구조(ITEM: ATOMS)를 프로그램이 인식하여 마지막 프레임(Timestep 855)의 원자 ID, 타입, xyz 좌표만 동적으로 자동 파싱.
+  - 이를 Pandas DataFrame으로 즉각 변환하여 상/하층 레이어를 분리한 뒤, cKDTree 모델로 상하층의 가장 인접한 원자 쌍(Pair) 정보를 결합합.
+
+## 모델링 방법론 (머신러닝 파이프라인)
+
+### 모델링 방법 검토
+- 라벨이 없는 비지도 상황이므로 K-Means 클러스터링(k=3) 을 통해 도메인의 가상 정답(Pseudo-Label)을 생성
+- K-Means 결과를 검증하고, 나아가 좌표계 자체와의 비선형적 관계를 모델링해 내기 위해 Random Forest(앙상블 트리) 분류기를 선택
+
+### 모델링 계획
+- 전처리: 스케일 이상치를 막기 위한 `StandardScaler` 적용.
+- 피처 엔지니어링: 물리적 분류의 핵심인 층간 수직 거리(dz)와 수평 최단 거리(`dist_xy`) 변수 도출.
+- 모델 학습 및 진단 (핵심): K-Means로 기반 잡은 라벨을 이용해 RF 모델을 훈련 -> 이때, `dz` 와 `dist_xy` 변수가 피처 특성상 강력한 정보 Leakage를 유발한다는 것을 진단
+- 고도화: 정보 누수를 일으키는 파생 변수를 모델에서 과감하게 배제하고, 가장 엄격한 조건의 공간 좌표(`ux`, `uy` 주변 등) 피처만으로 Base 모델 재설계 수행. 5-Fold 결측 검증 시도.
+
+## 주요 리스크 요인 
+
+- K-Means 클러스터링을 할 때 `dz`와 `dist_xy`를 정답화의 핵심 기준으로 사용했는데, 이를 평가 과정인 RF 훈련 피처에 그대로 투입하면 정확도 100%의 Overfitting이 발생
+- Feature Importance(변수 중요도) 분석을 활용하여 어떤 변수가 누수를 유발했는지 원인을 파악하고, 이를 삭제한 Baseline 피처 로직 설계로 전환해 객관성과 공정성을 확보
+
+## 결과
 
 ### ML Classification (Twisted Bilayer h-BN θ = 1.08°)
 
@@ -90,11 +125,11 @@
 | **BA** | 2,460 | 44.1% | AB 거울 대칭 — 안정 스태킹 |
 
 > AA 영역이 가장 좁고(10%), 안정 상태인 AB/BA가 90%를 차지하며  
-> 이는 참고논문(Li et al. 2024)의 lattice relaxation 이론과 일치합니다.
+> 이는 참고논문(Li et al. 2024)의 lattice relaxation 이론과 일치함을 확인
 
 ---
 
-## References
+## 참고문헌
 
 1. Li, F., Lee, D., Leconte, N., Javvaji, S., & Jung, J. (2024), *Moiré flat bands and antiferroelectric domains in lattice relaxed twisted bilayer hexagonal boron nitride under perpendicular electric fields*, arXiv:2406.12231
 2. Naik, S. et al. (2022). *Twister: Construction and structural relaxation of commensurate Moiré superlattices*, ScienceDirect
