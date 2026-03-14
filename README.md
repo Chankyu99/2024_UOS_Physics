@@ -1,12 +1,12 @@
 # 2024 UOS Physics Internship
 
-![2024 고체물리 인턴 연구 포스터](poster.png)
+![2024 고체물리 인턴 연구 포스터](img/result/poster.png)
 
 ---
 
 ## Architecture
 
-![Architecture](architecture.png)
+![Architecture](img/result/architecture.png)
 
 ---
 
