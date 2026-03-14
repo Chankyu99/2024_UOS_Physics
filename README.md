@@ -1,12 +1,12 @@
 # 2024 UOS Physics Internship
 
-![2024 고체물리 인턴 연구 포스터](poster.png)
+![2024 고체물리 인턴 연구 포스터](img/result/poster.png)
 
 ---
 
 ## Architecture
 
-![Architecture](architecture.png)
+![Architecture](img/result/architecture.png)
 
 ---
 
@@ -15,36 +15,47 @@
 ```
 2024_UOS_Physics/
 ├── data/
-│   ├── graphene_bands.dat.gnu          # Graphene 밴드구조 (QE 출력)
-│   ├── graphene_pdos_tot.dat           # Graphene 전체 PDOS
-│   ├── graphene_pdos_C1_s/p.dat        # C 원자별 궤도 PDOS
-│   ├── graphene_pdos_C2_s/p.dat
-│   ├── graphene_3dbands_4/5.dat        # 3D 밴드구조 데이터
-│   ├── hbn_bands.dat.gnu               # h-BN 밴드구조 (QE 출력)
-│   ├── hbn_pdos_tot.dat                # h-BN 전체 PDOS
-│   ├── hbn_pdos_B/N_s/p.dat           # B, N 원자별 궤도 PDOS
-│   ├── hbn_lammps_dump.dat            # LAMMPS 완화 결과 (ML 입력, ~8MB)
-│   ├── hbn_superlattice.dat           # 초격자 좌표
-│   ├── hbn_twist.inp                  # Twister 입력 파라미터 (θ = 1.08°)
-│   ├── hbn_input_data.txt             # 메인 입력 데이터
-│   └── *.png                          # 시각화 결과 이미지
-├── notebooks/
-│   ├── 2024_portfolio_internship.ipynb   # 메인 Notebook
-│   ├── domain_classification.ipynb       # 도메인 분류 실험
-│   ├── 2024_summer_solid_state.ipynb     # 여름방학 스터디 노트
-│   ├── tutorial_dft_qe.ipynb             # QE DFT 튜토리얼
-│   ├── 2024_08_07_dft_notes.ipynb
-│   ├── 2024_08_12_notes.ipynb
-│   └── archive/                       # 임시 노트북 보관
+│   ├── graphene_band_structure.gnu       # Graphene 밴드구조 (QE 출력)
+│   ├── graphene_total_pdos.dat           # Graphene 전체 PDOS
+│   ├── graphene_pdos_C1_s.dat            # C1 원자 궤도 s PDOS
+│   ├── graphene_pdos_C1_p.dat            # C1 원자 궤도 p PDOS
+│   ├── graphene_pdos_C2_s.dat            # C2 원자 궤도 s PDOS
+│   ├── graphene_pdos_C2_p.dat            # C2 원자 궤도 p PDOS
+│   ├── graphene_3d_bands_layer4.dat      # 3D 밴드구조 데이터 (layer 4)
+│   ├── graphene_3d_bands_layer5.dat      # 3D 밴드구조 데이터 (layer 5)
+│   ├── graphene_3dbands_sm_4.dat         # Smoothed 3D 밴드구조 (layer 4)
+│   ├── graphene_3dbands_sm_5.dat         # Smoothed 3D 밴드구조 (layer 5)
+│   ├── hbn_band_structure.gnu            # h-BN 밴드구조 (QE 출력)
+│   ├── hbn_total_pdos.dat                # h-BN 전체 PDOS
+│   ├── hbn_pdos_tot_v2.dat               # h-BN 전체 PDOS v2
+│   ├── hbn_pdos_B_s.dat                  # B 원자 궤도 s PDOS
+│   ├── hbn_pdos_B_p.dat                  # B 원자 궤도 p PDOS
+│   ├── hbn_pdos_N_s.dat                  # N 원자 궤도 s PDOS
+│   ├── hbn_pdos_N_p.dat                  # N 원자 궤도 p PDOS
+│   ├── hbn_3d_bands_layer4.dat           # h-BN 3D 밴드구조 (layer 4)
+│   ├── hbn_3d_bands_layer5.dat           # h-BN 3D 밴드구조 (layer 5)
+│   ├── hbn2_3dbands_4.dat                # h-BN 3D 밴드 (System 2, layer 4)
+│   ├── hbn2_3dbands_5.dat                # h-BN 3D 밴드 (System 2, layer 5)
+│   ├── hbn_proj_bands.dat                # h-BN Projected 반드 구조
+│   ├── hbn_lammps_dump.dat               # LAMMPS 완화 결과 (ML 입력)
+│   ├── hbn_superlattice_coordinates.dat  # 초격자 좌표
+│   ├── hbn_twist_input.inp               # Twister 입력 파라미터 (θ = 1.08°)
+│   ├── hbn_input_parameters.txt          # 메인 입력 파라미터 데이터
+│   ├── bands.dat.gnu                     # 기타 밴드구조 1
+│   └── bands.dat(1).gnu                  # 기타 밴드구조 2
+├── img/
+│   ├── result/                           # 완성된 시각화 디렉토리
+│   └── visualization/                    # 시각화 분석 디렉토리
 ├── src/
-│   ├── __init__.py
-│   ├── twister.py                     # 초격자 좌표 생성
-│   ├── funcs.py                       # 파싱·피처 추출 유틸
-│   ├── tovasp.py                      # VASP 포맷 변환
-│   └── plot.py                        # 시각화 CLI 모듈                
-├── .gitignore
-├── requirements.txt
-└── README.md
+│   ├── __init__.py                       # 패키지 구성을 위한 파일
+│   ├── twister.py                        # 초격자 좌표 생성
+│   ├── funcs.py                          # 파싱·피처 추출 유틸
+│   ├── tovasp.py                         # VASP 포맷 변환
+│   └── plot.py                           # 시각화 CLI 모듈
+├── Notebook.ipynb                        # 메인 머신러닝 분석 노트북
+├── graphene_band_structure.ipynb         # Graphene 밴드구조 스터디 노트 (메인 노트북 참고용)
+├── requirements.txt                      # 환경 패키지 목록
+└── README.md                             # 메인 README.md
 ```
 
 ---
