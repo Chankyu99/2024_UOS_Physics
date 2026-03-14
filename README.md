@@ -7,7 +7,6 @@
 ## Architecture
 
 ![Architecture](img/result/architecture.png)
-
 ---
 
 ## Directory Structure
