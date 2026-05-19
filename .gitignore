@@ -38,3 +38,17 @@ data/g_3Dbands.*
 # Temporary files
 *.tmp
 *.bak
+
+# EDA intermediates (regenerable from scripts/run_labeling.py etc.)
+eda/out/
+
+# Pipeline outputs — keep small CSVs for review, ignore large parquets.
+# Toggle these lines based on whether you want artifacts tracked.
+data/processed/*.parquet
+!data/processed/.gitkeep
+
+# Paper PDF (copyright). Page-level extractions also excluded; keep
+# small fig crops used by README.
+논문.pdf
+*.pdf
+img/paper/page*.png
